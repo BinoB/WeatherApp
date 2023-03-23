@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Current Weather</title>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <style>
+        body{
+            background-image: url("https://r4.wallpaperflare.com/wallpaper/670/193/214/low-poly-wireframe-poly-digital-art-wallpaper-18268c6a1f7cd7f9bef0c992c2693b60.jpg");
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+      .card-header {
+        background-color: #0a2735;
+        color: #fff;
+      }
+      .card-body {
+        background-color: #f7f7f7;
+        
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container my-5">
+      <div class="row justify-content-center">
+        <div class="col-md-6">
+          <div class="card text-center">
+            <div class="card-header">
+              <h5>Current Weather</h5>
+            </div>
+            <div class="card-body">
+              <form class="form-inline justify-content-center">
+                <div class="form-group">
+                  <label for="city-input">City:</label>
+                  <input
+                    type="text"
+                    class="form-control mx-sm-3"
+                    id="city-input"
+                    placeholder="Enter city name"
+                  />
+                </div>
+                <button type="submit" class="btn btn-primary">Search</button>
+              </form>
+              <h1 id="city"></h1>
+              <h2 id="temperature"></h2>
+              <p id="description"></p>
+              <img id="icon" src="" />
+              <div id="hourly-forecast"></div>
+              <div id="daily-forecast"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      const API_KEY = "95ce5e3bf957fe0c6e30e5e37b9bdca4";
+
+      function getCurrentWeather(city) {
+        const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric`;
+
+        return fetch(url)
+          .then((response) => response.json())
+          .then((data) => {
+            const temperature = `${data.main.temp} °C`;
+            const description = data.weather[0].description;
+            const iconCode = data.weather[0].icon;
+            const iconUrl = `http://openweathermap.org/img/w/${iconCode}.png`;
+
+            document.getElementById("temperature").textContent = temperature;
+            document.getElementById("description").textContent = description;
+            document.getElementById("icon").setAttribute("src", iconUrl);
+          })
+          .catch((error) => console.log(error));
+      }
+
+      function getHourlyForecast(lat, lon) {
+        const url = `https://api.openweathermap.org/data/2.5/onecall?lat=${lat}&lon=${lon}&exclude=current,minutely,daily,alerts&appid=${API_KEY}&units=metric`;
+
+        return fetch(url)
+          .then((response) => response.json())
+          .then((data) => {
+            const hourlyForecast = data.hourly
+              .map((hour) => {
+                const time = new Date(hour.dt * 1000).toLocaleTimeString([], {
+                  hour: "numeric",
+                  minute: "2-digit",
+                });
+                const temperature = `${hour.temp} °C`;
+                const iconCode = hour.weather[0].icon;
+                const iconUrl = `http://openweathermap.org/img/w/${iconCode}.png`;
+
+                return `
+              <div class="hourly-forecast-item">
+                <h5>${time}</h5>
+                <img src="${iconUrl}" alt="${hour.weather[0].description}">
+            <p>${temperature}</p>
+          </div>
+        `;
+              })
+              .join("");
+
+            document.getElementById("hourly-forecast").innerHTML = `
+        <h4>Hourly Forecast</h4>
+        <div class="hourly-forecast">${hourlyForecast}</div>
+      `;
+          })
+          .catch((error) => console.log(error));
+      }
+
+      function getDailyForecast(lat, lon) {
+        const url = `https://api.openweathermap.org/data/2.5/onecall?lat=${lat}&lon=${lon}&exclude=current,minutely,hourly,alerts&appid=${API_KEY}&units=metric`;
+
+        return fetch(url)
+          .then((response) => response.json())
+          .then((data) => {
+            const dailyForecast = data.daily
+              .slice(1, 6)
+              .map((day) => {
+                const weekday = new Date(day.dt * 1000).toLocaleDateString([], {
+                  weekday: "short",
+                });
+                const temperature = `${day.temp.day} °C`;
+                const iconCode = day.weather[0].icon;
+                const iconUrl = `http://openweathermap.org/img/w/${iconCode}.png`;
+
+                return `
+          <div class="daily-forecast-item">
+            <h5>${weekday}</h5>
+            <img src="${iconUrl}" alt="${day.weather[0].description}">
+            <p>${temperature}</p>
+          </div>
+        `;
+              })
+              .join("");
+
+            document.getElementById("daily-forecast").innerHTML = `
+        <h4>Daily Forecast</h4>
+        <div class="daily-forecast">${dailyForecast}</div>
+      `;
+          })
+          .catch((error) => console.log(error));
+      }
+
+      function handleSubmit(event) {
+        event.preventDefault();
+        const city = document.getElementById("city-input").value;
+        getCurrentWeather(city).then((data) => {
+          const {
+            coord: { lat, lon },
+            name: city,
+          } = data;
+          document.getElementById("city").textContent = city;
+          getHourlyForecast(lat, lon);
+          getDailyForecast(lat, lon);
+        });
+      }
+
+      const form = document.querySelector("form");
+      form.addEventListener("submit", handleSubmit);
+    </script>
+  </body>
+</html>
